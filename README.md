@@ -1,4 +1,4 @@
-# CryptoAI Telegram
+# RobinHood Stock Analysis - Machine Learning
 
 This project demonstrates how to combine technical analysis with machine learning to generate buy and sell signals for stocks. It downloads historical stock data, calculates technical indicators, generates trading signals, trains a machine learning model, and uses SHAP to explain model predictions. Although the repository is named **CryptoAI Telegram**, the code currently focuses on stock signal generation and model interpretability.
 
