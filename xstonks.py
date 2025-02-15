@@ -27,8 +27,7 @@ def login_to_robinhood(username, password, mfa=False):
     """
     Log into Robinhood.
     """
-    print(username)
-    print(password)
+
     try:
         if mfa:
             #mfa_code = input("Enter MFA Code: ") # MFA INFO
