@@ -1,37 +1,45 @@
-# RobinHood Stock Analysis - Machine Learning
+# Robinhood Technical Analysis & Trading Bot
 
-This project demonstrates how to combine technical analysis with machine learning to generate buy and sell signals for stocks. It downloads historical stock data, calculates technical indicators, generates trading signals, trains a machine learning model, and uses SHAP to explain model predictions. Although the repository is named **CryptoAI Telegram**, the code currently focuses on stock signal generation and model interpretability.
+This repository contains a modular Python codebase designed to integrate with Robinhood via the `robin_stocks` library. The project is built for technical analysis and short-term trading, enabling you to retrieve market data, compute technical indicators, identify bullish signals, and even execute trades directly through Robinhood.
 
 ## Features
 
-- **Historical Data Acquisition**:  
-  Uses [yfinance](https://pypi.org/project/yfinance/) to download daily historical data for a list of stock symbols (e.g., AAPL, MSFT, GOOG) for a specified date range.
+- **Authentication**  
+  Log into your Robinhood account securely using environment variables.
 
-- **Technical Indicator Computation**:  
-  Calculates several key technical indicators using [TA-Lib](https://mrjbq7.github.io/ta-lib/):
-  - **SMA50 & SMA200**: 50-day and 200-day Simple Moving Averages.
-  - **RSI**: 14-day Relative Strength Index.
-  - **MACD**: Moving Average Convergence Divergence and its signal line.
+- **Data Retrieval**  
+  - Fetch real-time quotes for stocks.
+  - Retrieve historical candlestick data for various intervals (e.g., 5-minute, daily).
 
-- **Signal Generation**:  
-  Generates buy and sell signals based on technical criteria:
-  - **Buy Signal**: When the 50-day SMA is above the 200-day SMA and RSI is below 30.
-  - **Sell Signal**: When the 50-day SMA is below the 200-day SMA and RSI is above 70.
+- **Technical Indicator Calculations**  
+  - **Moving Averages (SMA):** Compute short-term (e.g., 10/50-day) and long-term (e.g., 200-day) moving averages.
+  - **RSI (Relative Strength Index):** Analyze momentum to determine overbought or oversold conditions.
+  - **MACD (Moving Average Convergence Divergence):** Generate MACD, signal line, and histogram for trend analysis.
+  - **Bollinger Bands:** Calculate upper, lower, and middle bands to assess volatility.
 
-- **Machine Learning Integration**:  
-  Trains an [XGBoost](https://xgboost.readthedocs.io/) classifier using selected technical indicators as features to predict buy signals (binary classification). The model is trained on data (e.g., from AAPL) split into training and testing sets.
+- **Bullish Signal Detection**  
+  Identify various bullish indicators:
+  - Bullish MACD crossovers.
+  - Bollinger Band bounces.
+  - Volume spikes.
+  - Candlestick patterns such as bullish engulfing and hammer formations.
 
-- **Model Explainability**:  
-  Uses [SHAP](https://shap.readthedocs.io/) to:
-  - Generate a SHAP summary plot that visualizes feature importance.
-  - Provide a daily signal explanation with a SHAP force plot, helping you understand the model’s decision-making process.
+- **Golden Cross Analysis**  
+  Check if a stock is nearing a golden cross (i.e., when a short-term moving average is about to cross above a long-term moving average) by analyzing trends and narrowing gaps.
 
-- **Extensible Design**:  
-  The code structure allows for easy extension. You can add more stocks, adjust technical indicator parameters, or integrate additional models and data sources (for example, to send trading signals via Telegram).
+- **DataFrame Generation**  
+  Convert historical data into pandas DataFrames for further analysis, such as checking for a golden cross.
 
-## Prerequisites
+- **Trade Execution**  
+  Execute market orders (buy/sell) through Robinhood’s API.
 
-Ensure you have Python 3 installed. You will also need to install the following libraries:
+- **Watchlist Integration**  
+  Retrieve stocks from a specific Robinhood watchlist (e.g., "xstonks") and analyze each for bullish setups.
 
-```bash
-pip install yfinance pandas ta-lib xgboost scikit-learn shap
+## Installation
+
+1. **Clone the Repository:**
+
+   ```bash
+   git clone https://github.com/yourusername/your-repo-name.git
+   cd your-repo-name
