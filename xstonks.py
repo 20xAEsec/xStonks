@@ -22,6 +22,13 @@ import pyotp
 import json
 from dotenv import load_dotenv
 load_dotenv()
+
+
+# @TODO
+# Generate daily report of top movers and analysis results
+# Send to Telegram
+# Hook into Telegram bot, and receive analysis.
+
 # -------------------- Authentication --------------------
 def login_to_robinhood(username, password, mfa=False):
     """
@@ -45,7 +52,7 @@ def login_to_robinhood(username, password, mfa=False):
         return None
 
 # -------------------- Data Retrieval Functions --------------------
-def get_quote(symbol):
+async def get_quote(symbol):
     """
     Retrieve real-time quote data for a given symbol.
     """
@@ -56,13 +63,13 @@ def get_quote(symbol):
         print(f"Error getting quote for {symbol}: {e}")
         return None
 
-def get_historicals(symbol, interval="5minute", span="day", bounds="regular"):
+async def get_historicals(symbol, interval="5minute", span="day", bounds="regular"):
     """
     Retrieve historical price data (candlesticks) for a given symbol.
     Returns a pandas DataFrame.
     """
     try:
-        historicals = r.stocks.get_stock_historicals(symbol, interval=interval, span=span, bounds=bounds)
+        historicals = await r.stocks.get_stock_historicals(symbol, interval=interval, span=span, bounds=bounds)
         df = pd.DataFrame(historicals)
         if df.empty:
             print(f"No historical data for {symbol}.")
@@ -82,15 +89,15 @@ def get_historicals(symbol, interval="5minute", span="day", bounds="regular"):
     except Exception as e:
         print(f"Error getting historical data for {symbol}: {e}")
         return None
-
+    
 # -------------------- Technical Indicator Functions --------------------
-def compute_moving_average(prices, period):
+async def compute_moving_average(prices, period):
     """
     Calculate the simple moving average (SMA) for a series of prices.
     """
     return prices.rolling(window=period).mean()
 
-def compute_rsi(prices, period=14):
+async def compute_rsi(prices, period=14):
     """
     Compute the Relative Strength Index (RSI) for a series of prices.
     """
@@ -103,7 +110,7 @@ def compute_rsi(prices, period=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-def compute_macd(prices, fast=12, slow=26, signal=9):
+async def compute_macd(prices, fast=12, slow=26, signal=9):
     """
     Compute MACD and its signal line using exponential moving averages.
     Returns: macd_line, signal_line, and MACD histogram.
@@ -115,7 +122,7 @@ def compute_macd(prices, fast=12, slow=26, signal=9):
     macd_hist = macd_line - signal_line
     return macd_line, signal_line, macd_hist
 
-def compute_bollinger_bands(prices, period=20, num_std=2):
+async def compute_bollinger_bands(prices, period=20, num_std=2):
     """
     Calculate Bollinger Bands for a series of prices.
     Returns: middle_band (SMA), upper_band, and lower_band.
@@ -127,31 +134,31 @@ def compute_bollinger_bands(prices, period=20, num_std=2):
     return sma, upper_band, lower_band
 
 # -------------------- Additional Bullish Signal Functions --------------------
-def check_bullish_macd(prices):
+async def check_bullish_macd(prices):
     """
     Check for a bullish MACD crossover.
     Returns True if the MACD line crosses above its signal line.
     """
-    macd_line, signal_line, _ = compute_macd(prices)
+    macd_line, signal_line, _ = await compute_macd(prices)
     if len(macd_line) < 2:
         return False
     if macd_line.iloc[-2] < signal_line.iloc[-2] and macd_line.iloc[-1] > signal_line.iloc[-1]:
         return True
     return False
 
-def check_bollinger_bounce(df, period=20, num_std=2):
+async def check_bollinger_bounce(df, period=20, num_std=2):
     """
     Check if the price is bouncing off the lower Bollinger Band.
     Returns True if the latest price is near the lower band and above the SMA.
     """
-    sma, upper_band, lower_band = compute_bollinger_bands(df['close_price'], period, num_std)
+    sma, upper_band, lower_band = await compute_bollinger_bands(df['close_price'], period, num_std)
     latest_price = df['close_price'].iloc[-1]
     # Consider it a bounce if price is within ~1% of the lower band and above the SMA.
     if latest_price <= lower_band.iloc[-1] * 1.01 and latest_price > sma.iloc[-1]:
         return True
     return False
 
-def check_volume_spike(df, multiplier=1.5):
+async def check_volume_spike(df, multiplier=1.5):
     """
     Check if the latest volume is significantly higher than the average.
     Returns True if current volume is at least 'multiplier' times the average of the last 20 periods.
@@ -164,7 +171,7 @@ def check_volume_spike(df, multiplier=1.5):
         return True
     return False
 
-def detect_bullish_engulfing(df):
+async def detect_bullish_engulfing(df):
     """
     Detect a bullish engulfing pattern using the last two candlesticks.
     Requires 'open_price' and 'close_price' columns.
@@ -180,7 +187,7 @@ def detect_bullish_engulfing(df):
             return True
     return False
 
-def detect_bullish_hammer(df):
+async def detect_bullish_hammer(df):
     """
     Detect a bullish hammer pattern in the latest candlestick.
     Requires 'open_price', 'close_price', 'high_price', and 'low_price' columns.
@@ -212,7 +219,7 @@ uses get_stock_historocals from robin_stocks to get the historical data for a st
     info (Optional[str]) – Will filter the results to have a list of the values that correspond to key that matches info.
 """
 
-def generate_historical_dataframes(symbols, interval="day", span="year", bounds="regular"):
+async def generate_historical_dataframes(symbol, interval="day", span="year", bounds="regular"):
     """
     For each symbol in the provided list, retrieves historical data using the Robinhood API,
     converts the data to a pandas DataFrame, and returns a dictionary mapping symbol to its DataFrame.
@@ -229,38 +236,38 @@ def generate_historical_dataframes(symbols, interval="day", span="year", bounds=
     """
     dataframes = {}
     
-    for symbol in symbols:
-        try:
-            historicals = r.stocks.get_stock_historicals(symbol, interval=interval, span=span, bounds=bounds)
-            # Convert the list of dictionaries to a DataFrame
-            df = pd.DataFrame(historicals)
-            if df.empty:
-                print(f"No historical data found for {symbol}.")
-                continue
+    try:
+        historicals = await r.stocks.get_stock_historicals(symbol, interval=interval, span=span, bounds=bounds)
+        # Convert the list of dictionaries to a DataFrame
+        df = pd.DataFrame(historicals)
+        if df.empty:
+            print(f"No historical data found for {symbol}.")
 
-            # Convert time and price columns
-            df['begins_at'] = pd.to_datetime(df['begins_at'])
-            df['close_price'] = df['close_price'].astype(float)
-            
-            # (Optional) Convert additional columns if needed
-            if 'open_price' in df.columns:
-                df['open_price'] = df['open_price'].astype(float)
-            if 'high_price' in df.columns:
-                df['high_price'] = df['high_price'].astype(float)
-            if 'low_price' in df.columns:
-                df['low_price'] = df['low_price'].astype(float)
-            if 'volume' in df.columns:
-                df['volume'] = df['volume'].astype(float)
-            
-            # Sort the data by date in case it isn't already sorted.
-            df.sort_values("begins_at", inplace=True)
-            df.reset_index(drop=True, inplace=True)
-            
-            dataframes[symbol] = df
-        except Exception as e:
-            print(f"Error retrieving data for {symbol}: {e}")
+        # Convert time and price columns
+        df['begins_at'] = pd.to_datetime(df['begins_at'])
+        df['close_price'] = df['close_price'].astype(float)
+        
+        # (Optional) Convert additional columns if needed
+        if 'open_price' in df.columns:
+            df['open_price'] = df['open_price'].astype(float)
+        if 'high_price' in df.columns:
+            df['high_price'] = df['high_price'].astype(float)
+        if 'low_price' in df.columns:
+            df['low_price'] = df['low_price'].astype(float)
+        if 'volume' in df.columns:
+            df['volume'] = df['volume'].astype(float)
+        
+        # Sort the data by date in case it isn't already sorted.
+        df.sort_values("begins_at", inplace=True)
+        df.reset_index(drop=True, inplace=True)
+
+    except Exception as e:
+        print(f"Error retrieving data for {symbol}: {e}")
     
-    return dataframes
+    return df
+
+
+    
 
 # # Example usage:
 # if __name__ == "__main__":
@@ -279,7 +286,7 @@ def generate_historical_dataframes(symbols, interval="day", span="year", bounds=
 #     # print(f"\nIs AAPL showing signs of an imminent golden cross? {result}")
 
 
-def is_golden_cross_imminent(df, short_period=50, long_period=200, lookback=5, gap_threshold=0.02):
+async def golden_cross_detector(df, short_period=50, long_period=200, lookback=5, gap_threshold=0.02):
     """
     Determines if a stock is showing indications of an imminent golden cross.
     
@@ -362,16 +369,15 @@ def is_golden_cross_imminent(df, short_period=50, long_period=200, lookback=5, g
         return False
 
 
-
-
-
-
 # -------------------- Extended Stock Analysis --------------------
-def analyze_stock_full(symbol):
+async def bullish_stock_check_data(symbol):
     """
     Analyze a stock and return a dictionary with the following fields:
-      - symbol
-      - last_trade_price, ma_short, ma_long, rsi
+      - symbol,
+      - last_trade_price,
+        ma_short, 
+        ma_long, 
+        rsi,
       - basic_ma_rsi_criteria: True if last_trade_price > ma_short > ma_long and rsi < 70.
       - bullish_macd: True if a bullish MACD crossover is detected.
       - bollinger_bounce: True if a bounce off the lower Bollinger Band is detected.
@@ -381,9 +387,9 @@ def analyze_stock_full(symbol):
     """
     data = {"symbol": symbol}
     
-    quote = get_quote(symbol)
+    quote = await get_quote(symbol)
     if quote is None:
-        print(f"Skipping {symbol} due to missing quote data.")
+        print(f"Missing quote data for {symbol}.")
         return None
     try:
         last_trade_price = float(quote.get('last_trade_price', 0))
@@ -392,15 +398,15 @@ def analyze_stock_full(symbol):
         return None
     data["last_trade_price"] = last_trade_price
 
-    df = get_historicals(symbol, interval="5minute", span="day", bounds="regular")
+    df = await get_historicals(symbol, interval="5minute", span="day", bounds="regular")
     if df is None or df.empty:
         print(f"Skipping {symbol} due to missing historical data.")
         return None
 
     # Compute moving averages and RSI on closing prices.
-    df['ma_short'] = compute_moving_average(df['close_price'], period=10)
-    df['ma_long'] = compute_moving_average(df['close_price'], period=50)
-    df['rsi'] = compute_rsi(df['close_price'], period=14)
+    df['ma_short'] = await compute_moving_average(df['close_price'], period=10)
+    df['ma_long'] = await compute_moving_average(df['close_price'], period=50)
+    df['rsi'] = await compute_rsi(df['close_price'], period=14)
     latest = df.iloc[-1]
     ma_short = latest['ma_short']
     ma_long = latest['ma_long']
@@ -411,11 +417,11 @@ def analyze_stock_full(symbol):
 
     # Basic criteria: Price above MA10, MA10 above MA50, RSI under 70.
     data["basic_ma_rsi_criteria"] = (last_trade_price > ma_short and ma_short > ma_long and rsi < 70)
-    data["bullish_macd"] = check_bullish_macd(df['close_price'])
-    data["bollinger_bounce"] = check_bollinger_bounce(df)
-    data["volume_spike"] = check_volume_spike(df)
-    data["bullish_engulfing"] = detect_bullish_engulfing(df)
-    data["bullish_hammer"] = detect_bullish_hammer(df)
+    data["bullish_macd"] = await check_bullish_macd(df['close_price'])
+    data["bollinger_bounce"] = await check_bollinger_bounce(df)
+    data["volume_spike"] = await check_volume_spike(df)
+    data["bullish_engulfing"] = await detect_bullish_engulfing(df)
+    data["bullish_hammer"] = await detect_bullish_hammer(df)
 
     return data
 
@@ -464,7 +470,7 @@ def get_top_movers(info=None):
 
 
 # -------------------- Main Function --------------------
-def analyze_top_movers():
+async def analyze_top_movers():
    
     # Retrieve the watchlist 'xstonks'
     #watchlist_name = "xstonks"
@@ -486,7 +492,7 @@ def analyze_top_movers():
     results = []
     for symbol in symbols:
         print(f"\nProcessing {symbol}...")
-        stock_data = analyze_stock_full(symbol)
+        stock_data = await bullish_stock_check_data(symbol)
         if stock_data:
             results.append(stock_data)
         # Optional: add a short sleep to avoid rate limiting.
@@ -503,33 +509,37 @@ def analyze_top_movers():
         ]
         df_results = df_results[cols_order]
         print("\nAnalysis Results:")
-        print(df_results)
+        return df_results
     else:
         print("No valid stock data was gathered.")
 
 
-def main():
-     # Credentials: Use environment variables or a secure method in production.
-    USERNAME = str(os.getenv("ROBINHOOD_USER"))
-    PASSWORD = str(os.getenv("ROBINHOOD_PASS"))
-    
-    # Log into Robinhood.
-    login_to_robinhood(USERNAME, PASSWORD, mfa=True)
-    
-    top_mover_symbols = get_top_movers()
-    print(f"Analyzing {top_mover_symbols}...")
-    historical_dfs = generate_historical_dataframes(top_mover_symbols)
+# def main():
 
-    for key, val in historical_dfs.items():
-        print(f"\n{key} historical data:")
-        print(val.head())
-        print(f"Checking for imminent golden cross for {key}...")
+#     # Log into Robinhood.
+#     login_to_robinhood(os.getenv("ROBINHOOD_USER"), os.getenv("ROBINHOOD_PASS"), mfa=True)
+    
+#     #symbols = get_top_movers()
+#     #print(f"Analyzing {symbols}...")
+    
+#     symbols = ["VSAT", "CICHY", "T", "SHOP"]
+    
+#     historical_dfs = generate_historical_dataframes(symbols)
+#     for key, val in historical_dfs.items():
+#         print(f"\n{key} historical data:")
+#         print(val.head())
+#         print(f"Checking for imminent golden cross for {key}...")
         
-        if is_golden_cross_imminent(val):
-            print("{key} is showing signs that a golden cross is imminent.")
-        else:
-            print("No imminent golden cross signal detected.")
+#         if is_golden_cross_imminent(val):
+#             print("{key} is showing signs that a golden cross is imminent.")
+#         else:
+#             print("No imminent golden cross signal detected.")
         
-    result = is_golden_cross_imminent
-if __name__ == "__main__":
-    main()
+#     result = is_golden_cross_imminent
+
+#     #  
+#     # Call the main function to start the analysis.
+    
+
+# if __name__ == "__main__":
+#     main()
