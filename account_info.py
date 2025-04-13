@@ -1,8 +1,9 @@
 import robin_stocks as r # robinhood API
 import pyotp # library to handle MFA
 from datetime import datetime 
-
 import credentials
+
+# Gets holding information from configured RobinHood account
 
 
 # If your account is configured with MFA
