@@ -1,5 +1,7 @@
 import pandas as pd
 
+# WORK IN PROGRESS; abandoned in favor of analysis by LLM
+
 # Function to add technical indicators to each stock's DataFrame
 def add_indicators(df):
     df['SMA50'] = ta.SMA(df['Close'], timeperiod=50)
